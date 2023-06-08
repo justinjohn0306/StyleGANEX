@@ -1,0 +1,10 @@
+-f https://download.pytorch.org/whl/torch_stable.html
+torch==1.7.1+cu110
+torchvision==0.8.2+cu110
+numpy
+opencv-contrib-python
+Pillow
+scipy
+scikit-image
+ipython
+gradio==3.23.0
