@@ -8,3 +8,5 @@ scipy
 scikit-image
 ipython
 gradio==3.23.0
+moviepy
+wget
