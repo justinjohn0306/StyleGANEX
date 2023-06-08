@@ -30,20 +30,30 @@ This repository provides the official PyTorch implementation for the following p
 - [03/2023] This website is created.
 
 
-## Installation
+## Quick Start
+
+Install MSVS 19 with C++ development options for desktop enabled  
+
+Use [Anaconda](https://www.anaconda.com/) and launch in Administrator Mode
 
 **Clone this repo:**
 ```bash
 git clone https://github.com/williamyang1991/StyleGANEX.git
 cd StyleGANEX
 ```
-**Dependencies:**
+```
+# create a new environment & activate the new environment
+conda create -n styleganex python=3.8 && conda activate styleganex
 
-We have tested on:
-- CUDA 10.1
-- PyTorch 1.7.1
-- Pillow 8.3.1; Matplotlib 3.4.2; opencv-python 4.5.3; tqdm 4.61.2; Ninja 1.10.2; dlib 19.24.0
+``%comspec% /k "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"``
 
+``set DISTUTILS_USE_SDK=1``
+
+#  prepare the basic environments
+pip install -r requirement.txt
+
+
+```
 <br/>
 
 ## (1) Inference
