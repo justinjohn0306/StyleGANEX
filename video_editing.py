@@ -17,17 +17,17 @@ from datasets import augmentations
 from scripts.align_all_parallel import align_face
 from latent_optimization import latent_optimization
 from utils.inference_utils import save_image, load_image, visualize, get_video_crop_parameter, tensor2cv2, tensor2label, labelcolormap
+from moviepy.editor import VideoFileClip
 
 class TestOptions():
     def __init__(self):
-
         self.parser = argparse.ArgumentParser(description="StyleGANEX Video Editing")
         self.parser.add_argument("--data_path", type=str, default='./data/390.mp4', help="path of the target image/video")
         self.parser.add_argument("--ckpt", type=str, default='pretrained_models/styleganex_toonify_cartoon.pt', help="path of the saved model")
         self.parser.add_argument("--output_path", type=str, default='./output/', help="path of the output results")
         self.parser.add_argument("--scale_factor", type=float, default=1.0, help="scale of the editing degree")
         self.parser.add_argument("--cpu", action="store_true", help="if true, only use cpu")
-        
+
     def parse(self):
         self.opt = self.parser.parse_args()
         args = vars(self.opt)
@@ -72,6 +72,7 @@ if __name__ == "__main__":
     print('Load models successfully!')
 
     video_path = args.data_path
+    original_audio = VideoFileClip(video_path).audio  # Extract audio from the original video
     video_cap = cv2.VideoCapture(video_path)
     success, frame = video_cap.read()
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -120,5 +121,7 @@ if __name__ == "__main__":
         print('Image editing successfully!')
     else:
         videoWriter.release()
+        edited_video = VideoFileClip(save_name)
+        edited_video = edited_video.set_audio(original_audio)  # Set the audio of the edited video
+        edited_video.write_videofile(save_name + "_with_audio.mp4")  # Save the video with audio
         print('Video editing successfully!')
-
