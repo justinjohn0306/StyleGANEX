@@ -38,7 +38,7 @@ Use [Anaconda](https://www.anaconda.com/) and launch in Administrator Mode
 
 **Clone this repo:**
 ```bash
-git clone https://github.com/williamyang1991/StyleGANEX.git
+git clone https://github.com/justinjohn0306/StyleGANEX.git
 cd StyleGANEX
 ```
 ```
