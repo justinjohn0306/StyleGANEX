@@ -9,6 +9,7 @@ import torch
 import dlib
 import cv2
 import PIL
+import moviepy.editor as mp
 from tqdm import tqdm
 import numpy as np
 import torch.nn.functional as F
@@ -23,6 +24,7 @@ from utils.inference_utils import save_image, load_image, visualize, get_video_c
 from models.psp import pSp
 from models.bisenet.model import BiSeNet
 from models.stylegan2.model import Generator
+from moviepy.editor import VideoFileClip
 
 class Model():
     def __init__(self, device):
@@ -260,45 +262,42 @@ class Model():
         return self.tensor2np(y_hat[0])
 
     def process_vediting(self, input_video: str, scale_factor: float, model_type: str, frame_num: int) -> tuple[list[np.ndarray], str]:
-        #false_image = np.zeros((256,256,3), np.uint8)
-        #info = 'Error: no face detected! Please retry or change the video.'
-            
         if input_video is None:
-            #return [false_image], 'default.mp4', 'Error: fail to load empty file.'
             raise gr.Error('Error: fail to load empty file.')
+    
         video_cap = cv2.VideoCapture(input_video)
         success, frame = video_cap.read()
         if success is False:
-            #return [false_image], 'default.mp4', 'Error: fail to load the video.' 
             raise gr.Error('Error: fail to load the video.')
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)         
-        
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
         if model_type is None or model_type == 'reduce age':
             task_name = 'edit_age'
         else:
             task_name = 'edit_hair'
-            
+
         with torch.no_grad():
             paras = get_video_crop_parameter(frame, self.landmarkpredictor)
             if paras is None:
-                #return [false_image], 'default.mp4', info
                 raise gr.Error(self.error_info)
-            h,w,top,bottom,left,right,scale = paras
-            H, W = int(bottom-top), int(right-left)
+            h, w, top, bottom, left, right, scale = paras
+            H, W = int(bottom - top), int(right - left)
             frame = cv2.resize(frame, (w, h))[top:bottom, left:right]
             x1 = self.transform(frame).unsqueeze(0).to(self.device)
             x2 = align_face(frame, self.landmarkpredictor)
             if x2 is None:
-                #return [false_image], 'default.mp4', info
                 raise gr.Error(self.error_info)
             x2 = self.transform(x2).unsqueeze(dim=0).to(self.device)
-            if self.print_log: print('first frame loaded')
+            if self.print_log:
+                print('first frame loaded')
             self.load_model(task_name)
-            if self.print_log: print('model %s loaded'%(task_name))
-            
+            if self.print_log:
+                print('model %s loaded' % (task_name))
+
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            videoWriter = cv2.VideoWriter('output.mp4', fourcc, video_cap.get(5), (4*W, 4*H))
-            
+            output_path = 'output.mp4'
+            output_video = cv2.VideoWriter(output_path, fourcc, video_cap.get(5), (4 * W, 4 * H), True)  # Enable audio
+
             viz_frames = []
             for i in range(frame_num):
                 if i > 0:
@@ -306,16 +305,22 @@ class Model():
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     frame = cv2.resize(frame, (w, h))[top:bottom, left:right]
                     x1 = self.transform(frame).unsqueeze(0).to(self.device)
-                y_hat = self.pspex(x1=x1, x2=x2, use_skip=self.pspex.opts.use_skip, zero_noise=True, 
-                        resize=False, editing_w= - scale_factor * self.editing_w[0:1])
+                y_hat = self.pspex(x1=x1, x2=x2, use_skip=self.pspex.opts.use_skip, zero_noise=True,
+                                   resize=False, editing_w=-scale_factor * self.editing_w[0:1])
                 y_hat = torch.clamp(y_hat, -1, 1)
-                videoWriter.write(tensor2cv2(y_hat[0].cpu()))
+                output_video.write(tensor2cv2(y_hat[0].cpu()))
                 if i < min(frame_num, 4):
                     viz_frames += [self.tensor2np(y_hat[0])]
-                
-            videoWriter.release()    
-            
-        return viz_frames, 'output.mp4'
+
+            output_video.release()
+
+        # Combine processed video with the input audio
+        input_audio = mp.AudioFileClip(input_video)
+        output_video_with_audio = mp.VideoFileClip(output_path).set_audio(input_audio)
+        final_output_path = 'output_with_audio.mp4'
+        output_video_with_audio.write_videofile(final_output_path, codec='libx264', audio_codec='aac')
+
+        return viz_frames, final_output_path
     
     
     def process_toonify(self, input_image: str, style_type: str) -> np.ndarray:
@@ -362,47 +367,44 @@ class Model():
 
 
     def process_vtoonify(self, input_video: str, style_type: str, frame_num: int) -> tuple[list[np.ndarray], str]:
-        #false_image = np.zeros((256,256,3), np.uint8)
-        #info = 'Error: no face detected! Please retry or change the video.'
-            
         if input_video is None:
             raise gr.Error('Error: fail to load empty file.')
-            #return [false_image], 'default.mp4', 'Error: fail to load empty file.'
+
         video_cap = cv2.VideoCapture(input_video)
         success, frame = video_cap.read()
         if success is False:
             raise gr.Error('Error: fail to load the video.')
-            #return [false_image], 'default.mp4', 'Error: fail to load the video.'        
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)         
-        
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
         if style_type is None or style_type == 'Pixar':
             task_name = 'toonify_pixar'
         elif style_type == 'Cartoon':
             task_name = 'toonify_cartoon'
         else:
             task_name = 'toonify_arcane'
-            
+
         with torch.no_grad():
             paras = get_video_crop_parameter(frame, self.landmarkpredictor)
             if paras is None:
                 raise gr.Error(self.error_info)
-                #return [false_image], 'default.mp4', info
-            h,w,top,bottom,left,right,scale = paras
-            H, W = int(bottom-top), int(right-left)
+            h, w, top, bottom, left, right, scale = paras
+            H, W = int(bottom - top), int(right - left)
             frame = cv2.resize(frame, (w, h))[top:bottom, left:right]
             x1 = self.transform(frame).unsqueeze(0).to(self.device)
             x2 = align_face(frame, self.landmarkpredictor)
             if x2 is None:
                 raise gr.Error(self.error_info)
-                #return [false_image], 'default.mp4', info
             x2 = self.transform(x2).unsqueeze(dim=0).to(self.device)
-            if self.print_log: print('first frame loaded')
+            if self.print_log:
+                print('first frame loaded')
             self.load_model(task_name)
-            if self.print_log: print('model %s loaded'%(task_name))
-            
+            if self.print_log:
+                print('model %s loaded' % (task_name))
+
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            videoWriter = cv2.VideoWriter('output.mp4', fourcc, video_cap.get(5), (4*W, 4*H))
-            
+            output_path = 'output.mp4'
+            output_video = cv2.VideoWriter(output_path, fourcc, video_cap.get(5), (4 * W, 4 * H), True)  # Enable audio
+
             viz_frames = []
             for i in range(frame_num):
                 if i > 0:
@@ -412,14 +414,19 @@ class Model():
                     x1 = self.transform(frame).unsqueeze(0).to(self.device)
                 y_hat = self.pspex(x1=x1, x2=x2, use_skip=self.pspex.opts.use_skip, zero_noise=True, resize=False)
                 y_hat = torch.clamp(y_hat, -1, 1)
-                videoWriter.write(tensor2cv2(y_hat[0].cpu()))
+                output_video.write(tensor2cv2(y_hat[0].cpu()))
                 if i < min(frame_num, 4):
                     viz_frames += [self.tensor2np(y_hat[0])]
-                
-            videoWriter.release()    
-            
-        return viz_frames, 'output.mp4'   
-    
+
+            output_video.release()
+
+        # Combine processed video with the input audio
+        input_audio = mp.AudioFileClip(input_video)
+        output_video_with_audio = mp.VideoFileClip(output_path).set_audio(input_audio)
+        final_output_path = 'output_with_audio.mp4'
+        output_video_with_audio.write_videofile(final_output_path, codec='libx264', audio_codec='aac')
+
+        return viz_frames, final_output_path   
     
     def process_inversion(self, input_image: str, optimize: str, input_latent: file-object, editing_options: str, 
                           scale_factor: float, seed: int) -> tuple[np.ndarray, np.ndarray]:
