@@ -42,7 +42,7 @@ git clone https://github.com/justinjohn0306/StyleGANEX.git
 cd StyleGANEX
 ```
 
-# create a new environment & activate the new environment
+## Create a new environment & activate the new environment
 ```
 conda create -n styleganex python=3.8 && conda activate styleganex
 
@@ -51,7 +51,7 @@ conda create -n styleganex python=3.8 && conda activate styleganex
 set DISTUTILS_USE_SDK=1
 ```
 
-#  prepare the basic environments
+## Prepare the basic environments
 ```
 pip install -r requirements.txt
 ```
