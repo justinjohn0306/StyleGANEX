@@ -41,15 +41,18 @@ Use [Anaconda](https://www.anaconda.com/) and launch in Administrator Mode
 git clone https://github.com/justinjohn0306/StyleGANEX.git
 cd StyleGANEX
 ```
-```
+
 # create a new environment & activate the new environment
+```
 conda create -n styleganex python=3.8 && conda activate styleganex
 
 %comspec% /k "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
 
 set DISTUTILS_USE_SDK=1
+```
 
 #  prepare the basic environments
+```
 pip install -r requirements.txt
 ```
 <br/>
